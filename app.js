@@ -8,15 +8,38 @@ const hpp = require("hpp");
 const cookieParser = require("cookie-parser");
 const userRouter = require("./routers/user.router");
 const globalErrorHandler = require("./controllers/globalErrController");
-const OperationalErr = require("./utils/error/OperationalErr");
+const OperationalErr = require("./helpers/OperationalErr");
+const cors = require("cors");
+// const { v4: uuidv4 } = require("uuid");
 
 const app = express();
+
+// app.post("/api/v1/users/avatar", upload, (req, res) => {
+
+//   console.log(req.file);
+
+//   const params = {
+//     Bucket: process.env.AWS_BUCKET_NAME,
+//     Key,
+//     Body: req.file.buffer,
+//   };
+
+//   s3.upload(params, (error, data) => {
+//     if (error) {
+//       res.status(500).send(error);
+//     }
+//     res.status(200).send({ message: "good to go", data });
+//   });
+// });
+
+app.use(cors());
 
 console.log(process.env.NODE_ENV);
 
 // ======================== 1) Global Middlewares for every routers ========================
 // Set Security HTTP headers
-app.use(helmet.contentSecurityPolicy({
+app.use(
+  helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
       baseUri: ["'self'"],
@@ -26,31 +49,36 @@ app.use(helmet.contentSecurityPolicy({
       styleSrc: ["'self'", "https:", "unsafe-inline"],
       upgradeInsecureRequests: [],
     },
-  }));
-
-  // Development logging
-  if(process.env.NODE_ENV === "development") {
-      app.use(morgan("dev"));
-  }
-
-  // Limit request from same IP
-  const limiter = rateLimit({
-      max: 100,
-      windowMs: 60 * 60 * 1000,
-      message: "Too many requests from this IP, please try again in an hour!",
   })
+);
 
-  app.use("/api", limiter);
+// Development logging
+if (process.env.NODE_ENV === "development") {
+  app.use(morgan("dev"));
+}
 
-  // Reading data from body into req.body
-  app.use(express.json({limit: "10kb"}));
-  app.use(cookieParser());
-  app.use((req, res, next) => {
-      console.log(req.cookies);
-      next();
-  });
+// Limit request from same IP
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 60 * 60 * 1000,
+  message: "Too many requests from this IP, please try again in an hour!",
+});
 
-  // Data sanitization against NoSQL query injection
+app.use("/api", limiter);
+
+// Reading data from body into req.body
+app.use(
+  express.json({
+    limit: "10kb",
+  })
+);
+app.use(cookieParser());
+app.use((req, res, next) => {
+  // console.log(req.cookies);
+  next();
+});
+
+// Data sanitization against NoSQL query injection
 //Example: "email": {"$gt": ""}
 app.use(mongoSanitize());
 
@@ -59,29 +87,29 @@ app.use(xss());
 
 // Prevent parameter pollution
 app.use(
-    hpp({
-      whitelist: [
-        "duration",
-        "ratingsQuantity",
-        "ratingsAverage",
-        "maxGroupSize",
-        "difficulty",
-        "price",
-      ],
-    })
-  );
-
-  // ======================== 2) Routes ========================
-
-  // API routes
-  app.use("/api/v1/users", userRouter);
-
-  app.all("*", (req, res, next) => {
-    return next(
-      new OperationalErr(`Can't find ${req.originalUrl} on this server!`, 404)
-    );
+  hpp({
+    whitelist: [
+      "duration",
+      "ratingsQuantity",
+      "ratingsAverage",
+      "maxGroupSize",
+      "difficulty",
+      "price",
+    ],
   })
+);
 
-  app.use(globalErrorHandler);
+// ======================== 2) Routes ========================
 
-  module.exports = app;
+// API routes
+app.use("/api/v1/users", userRouter);
+
+app.all("*", (req, res, next) => {
+  return next(
+    new OperationalErr(`Can't find ${req.originalUrl} on this server!`, 404)
+  );
+});
+
+app.use(globalErrorHandler);
+
+module.exports = app;

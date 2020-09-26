@@ -3,54 +3,112 @@ const crypto = require("crypto");
 const mongoose = require("mongoose");
 const docHooks = require("./user.doc.hooks");
 
-const userSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
+      type: String,
     },
     email: {
-        type: String,
-        unique: true,
-        lowercase: true,
+      type: String,
+      unique: true,
+      lowercase: true,
     },
     photo: {
-        type: String,
+      type: String,
+      default: "default.jpeg",
     },
     role: {
-        type: String,
-        enum: ["user", "creator", "admin"],
-        default: "user",
+      type: String,
+      enum: ["user", "creator", "admin"],
+      default: "user",
     },
     password: {
-        type: String,
-        select: false,
+      type: String,
+      select: false,
     },
     passwordConfirm: {
-        type: String,
-        select: false,
+      type: String,
+      select: false,
     },
     gender: {
-        type: String,
+      type: String,
     },
     birthday: {
-        type: Date,
+      type: Date,
     },
     passwordChangedAt: {
-        type: Date,
-        default: new Date,
+      type: Date,
+      default: new Date(),
+    },
+    createdAt: {
+      type: Date,
+      default: new Date(),
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
     active: {
-        type: Boolean,
-        default: true,
-        select: false,
-    }
-});
+      type: Boolean,
+      default: true,
+      select: false,
+    },
+  },
+  {
+    toJSON: {
+      virtuals: true,
+    },
+    toObject: {
+      virtuals: true,
+    },
+  }
+);
 
 // ======================== Hooks ========================
 docHooks.reEncryptPassword(userSchema);
+docHooks.updatePasswordChangedAt(userSchema);
 
+// ======================== Instance Method ========================
+userSchema.methods.correctPassword = async function (
+  candidatePassword,
+  actualPassword
+) {
+  return await bcrypt.compare(candidatePassword, actualPassword);
+};
 
+userSchema.methods.createPasswordResetToken = function () {
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 mins later
+
+  return resetToken;
+};
+
+userSchema.methods.isPasswordChanged = function (JWTTimestamp) {
+  if (this.passwordChangedAt) {
+    console.log({ passwordChangedAt: this.passwordChangedAt });
+    const changedTimeStamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+    console.log({ changedTimeStamp });
+    return changedTimeStamp > JWTTimestamp;
+  }
+
+  return false;
+};
+
+// Virtual Props
+userSchema.virtual("age").get(function () {
+  if (this.birthday !== undefined) {
+    return Math.floor(
+      (Date.now() - this.birthday) / (60 * 60 * 24 * 365 * 1000)
+    );
+  }
+});
 
 const User = mongoose.model("User", userSchema);
 

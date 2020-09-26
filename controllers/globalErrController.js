@@ -1,31 +1,31 @@
 // const update = require("immutability-helper");
-const OperationalErr = require("../utils/error/OperationalErr");
+const OperationalErr = require("../helpers/OperationalErr");
 
 const sendErrorDev = (error, req, res) => {
-    res.status(error.statusCode).json({
-      status: error.status,
-      error,
-      message: error.message,
-      stack: error.stack,
-    });
+  res.status(error.statusCode).json({
+    status: error.status,
+    error,
+    message: error.message,
+    stack: error.stack,
+  });
 };
 
 const sendErrorProd = (error, req, res) => {
-    if (error.isOperational) {
-      return res.status(error.statusCode).json({
-        status: error.status,
-        message: error.message,
-      });
-    }
-    // Programming and other errors
-    // 1) log error
-    console.error("ERROR: ", error);
-
-    // 2) send response
-    return res.status(500).json({
-      status: "error",
-      message: "Something went very wrong!"
+  if (error.isOperational) {
+    return res.status(error.statusCode).json({
+      status: error.status,
+      message: error.message,
     });
+  }
+  // Programming and other errors
+  // 1) log error
+  console.error("ERROR: ", error);
+
+  // 2) send response
+  return res.status(500).json({
+    status: "error",
+    message: "Something went very wrong!",
+  });
 };
 
 const handleObjectIdErrorDB = (error) => {
