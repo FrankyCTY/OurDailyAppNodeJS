@@ -10,27 +10,8 @@ const userRouter = require("./routers/user.router");
 const globalErrorHandler = require("./controllers/globalErrController");
 const OperationalErr = require("./helpers/OperationalErr");
 const cors = require("cors");
-// const { v4: uuidv4 } = require("uuid");
 
 const app = express();
-
-// app.post("/api/v1/users/avatar", upload, (req, res) => {
-
-//   console.log(req.file);
-
-//   const params = {
-//     Bucket: process.env.AWS_BUCKET_NAME,
-//     Key,
-//     Body: req.file.buffer,
-//   };
-
-//   s3.upload(params, (error, data) => {
-//     if (error) {
-//       res.status(500).send(error);
-//     }
-//     res.status(200).send({ message: "good to go", data });
-//   });
-// });
 
 app.use(cors());
 
@@ -102,7 +83,7 @@ app.use(
 // ======================== 2) Routes ========================
 
 // API routes
-app.use("/api/v1/users", userRouter);
+app.use(`${process.env.URL}/users`, userRouter);
 
 app.all("*", (req, res, next) => {
   return next(

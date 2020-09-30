@@ -1,36 +1,18 @@
 process.on("uncaughtException", (err) => {
-    console.log("UNCAUGHT EXCEPTION! Shutting down...");
-    console.log(err);
-  
-    process.exit(1);
-  });
+  console.log("UNCAUGHT EXCEPTION! Shutting down...");
+  console.log(err);
+
+  process.exit(1);
+});
 
 // eslint-disable-next-line import/newline-after-import
 const dotenv = require("dotenv");
-dotenv.config({ path: "./config.env" });
-const mongoose = require("mongoose");
+dotenv.config({ path: "./config/config.env" });
 const app = require("./app");
+const connectToMongoDB = require("./config/database");
 
-// 1) MongoDB set up
-const DB = process.env.DATABASE.replace(
-  "<PASSWORD>",
-  process.env.DATABASE_PASSWORD
-);
-
-mongoose
-  .connect(DB, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-  })
-  .then(() => {
-    console.log("DB connection successful!");
-  })
-  .catch((err) => {
-    console.error(err.message);
-    process.exit(1);
-  });
+// Connecting to the database
+connectToMongoDB();
 
 // 2) Start server
 const port = process.env.PORT || 3000;

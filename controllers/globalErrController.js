@@ -66,6 +66,8 @@ module.exports = (error, req, res, next) => {
   } else if (process.env.NODE_ENV === "production") {
     let err = { ...error };
 
+    // handling error from mongodb or jsonwebtoken etc.
+    // since it's different on how to identify their errors.
     if (error.kind === "ObjectId") err = handleObjectIdErrorDB(error);
     if (error.code === 11000) err = handleDuplicateFieldDB(error);
     if (error._message === "Validation failed")

@@ -103,14 +103,10 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
   });
 
   // 3) Update in database
-  // const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
-  // @error update
-  const filteredReqBody = req.body;
-  console.log({ filteredReqBody });
+  const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
   if (req.file) {
     filteredReqBody.photo = req.file.filename;
   }
-  console.log({ filteredReqBody });
   const updatedUser = await User.findByIdAndUpdate(
     req.user.id,
     filteredReqBody,
