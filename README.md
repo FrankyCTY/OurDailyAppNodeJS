@@ -18,7 +18,7 @@ This project uses the MVC framework, and the database I am using is MongoDB.
 
 ## Error Management
 
-Focal Point:
+Focal Point:<br/>
 **1.** Errors being splitted into two types, isOperational / notOperational (unknown).
 
 isOperational means the error that we can identified so they are operational **(controlled)**, I create a custom error with message for this type of error using my OperationalErr error class.
