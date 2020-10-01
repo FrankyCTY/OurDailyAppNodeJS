@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
-module.exports = function connectToMongoDB() {
-  const DB = process.env.DATABASE.replace(
-    "<PASSWORD>",
-    process.env.DATABASE_PASSWORD
-  );
+exports.DB = process.env.DATABASE.replace(
+  "<PASSWORD>",
+  process.env.DATABASE_PASSWORD
+);
 
+exports.connectToMongoDB = (DB) => {
   mongoose
     .connect(DB, {
       useNewUrlParser: true,
