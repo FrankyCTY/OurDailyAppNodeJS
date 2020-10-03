@@ -40,5 +40,5 @@ notOperational errs are the err that happens out of anticipation **(not controll
 
 ## Data Modeling
 Please check the video for explanation.</br>
-![GitHub Logo](/readMe/DataModelingSkillsme.png) 
+![GitHub Logo](/readMe/datamodeling.png) 
 
