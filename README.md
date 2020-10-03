@@ -12,6 +12,7 @@ This project uses the MVC framework, and the database I am using is MongoDB.
 **Config:** config.env / database.js / AWS.js configuration saved here<br/>
 **app.js:** Global middlewares for example helmet (set security HTTP headers) or express-rate-limit (limit rate of request of the same IP address can send to our API) are defined here.<br/>
 **server.js:** Actual place to start our backend, we connect our db and listen for request from here.<br/>
+**test.js** Being used to test the reply comment notification, implemented with socket.io.<br/>
 
 ![GitHub Logo](/readMe/code_structure.png) 
 
@@ -35,3 +36,9 @@ notOperational errs are the err that happens out of anticipation **(not controll
 **Note:** Errors from MongoDB or other external packages will be customized in the globalErrController.js to unite the error message structure.
 
 ![GitHub Logo](/readMe/error_handling.png) 
+
+
+## Data Modeling
+Please check the video for explanation.
+![GitHub Logo](/readMe/DataModelingSkillsme.png) 
+
