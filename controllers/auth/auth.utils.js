@@ -20,7 +20,9 @@ exports.createSendToken = (user, statusCode, res) => {
     expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRIES_IN * 24 * 60 * 60 * 1000
     ),
-    httpOnly: true,
+    // httpOnly: true,
+    // sameSite: 'strict', // THIS is the config you are looing for.
+    // secure: true,
   };
 
   // Token will only be sent via HTTPS
@@ -29,6 +31,7 @@ exports.createSendToken = (user, statusCode, res) => {
   // Send cookie -> server to client
   res.cookie("jwt", token, cookieOptions);
 
+  res.cookie("testCookie", "hello world", {httpOnly: true});
   // Get rid of sensitive data
   user.password = undefined;
   user.passwordChangedAt = undefined;
@@ -37,7 +40,9 @@ exports.createSendToken = (user, statusCode, res) => {
     status: "success",
     token,
     data: {
-      user,
+      // user,
+      cookie: "hi",
+
     },
   });
 };

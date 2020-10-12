@@ -5,7 +5,7 @@ const OperationalErr = require("../../helpers/OperationalErr");
 const { filterObj } = require("./user.utils");
 const multer = require("multer");
 const sharp = require("sharp");
-const { s3 } = require("../../helpers/AWS");
+const { s3 } = require("../../config/AWS");
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, callback) => {
@@ -44,11 +44,9 @@ exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
     .jpeg({ quality: 90 })
     .toBuffer();
 
-  console.log({ imgBuffer });
-
   req.file.resizedImgBuffer = imgBuffer;
 
-  next();
+  return next();
 });
 
 // @desc    Allow admin to get all user info with queryString filtering
@@ -56,7 +54,6 @@ exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
 // @restrictTo only admin
 
 exports.getAllUsers = withCatchErrAsync(async (req, res, next) => {
-  //   console.log({ query: req.query });
   const queryParamFeature = new QueryStringHandler(User.find(), req.query)
     .filter()
     .sort()
@@ -86,21 +83,29 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     );
   }
 
-  const { filename, resizedImgBuffer } = req.file;
-  const imgBuffer = resizedImgBuffer;
+  // @planToImplement delete the old avatar in aws before doing other things
+  // save the timestamp to be used as the identifier to locate the correct img
+  // in aws
 
-  // 2) Upload to AWS S3 bucket
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Key: filename,
-    Body: imgBuffer,
-  };
-
-  s3.upload(params, (error, data) => {
-    if (error) {
-      return next(new OperationalErr("AWS server error", 500, "local"));
-    }
-  });
+  // Only update aws if req.file exists
+  if(req.file) {
+    const { filename, resizedImgBuffer } = req.file;
+    const imgBuffer = resizedImgBuffer;
+  
+    // 2) Upload to AWS S3 bucket
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: filename,
+      Body: imgBuffer,
+    };
+  
+    return s3.upload(params, (error, data) => {
+      if (error) {
+        return next(new OperationalErr("AWS server error", 500, "local"));
+      }
+    });
+  }
+  
 
   // 3) Update in database
   const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
@@ -115,7 +120,8 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
       // runValidators: true,
     }
   );
-
+  console.log("Ready to response with success status");
+  // return;
   return res.status(200).json({
     status: "success",
     data: {

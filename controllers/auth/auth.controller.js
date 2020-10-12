@@ -17,6 +17,7 @@ exports.protect = withCatchErrAsync(async (req, res, next) => {
   let token;
   const { authorization } = req.headers;
 
+
   if (authorization && authorization.startsWith("Bearer")) {
     token = authorizations.split(" ")[1];
   } else if (req.cookies.jwt) {
@@ -24,6 +25,7 @@ exports.protect = withCatchErrAsync(async (req, res, next) => {
   }
 
   if (token === null || token === undefined) {
+    
     return next(
       new OperationalErr(
         "You are not logged in! Please log in to get access.",
@@ -62,6 +64,7 @@ exports.protect = withCatchErrAsync(async (req, res, next) => {
   }
 
   // GRANT ACCESS TO PROTECTED ROUTE
+  console.log("I am in the protect middleware");
   req.user = currentUser;
   next();
 });

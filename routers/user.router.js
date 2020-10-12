@@ -28,6 +28,8 @@ router.post("/signup", signUpValidation, validate, authController.signUp);
 router.post("/login", logInValidation, validate, authController.logIn);
 router.post("/googlelogin", authController.googleLogIn);
 
+// @private
+// @body: avatar, name, email, birthday
 router.patch(
   "/updateMe",
   authController.protect,

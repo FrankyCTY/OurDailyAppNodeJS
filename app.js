@@ -10,14 +10,23 @@ const userRouter = require("./routers/user.router");
 const globalErrorHandler = require("./controllers/globalErrController");
 const OperationalErr = require("./helpers/OperationalErr");
 const cors = require("cors");
+const { logger } = require("winston");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({credentials: true, origin: true}));
 
 console.log(process.env.NODE_ENV);
 
 // ======================== 1) Global Middlewares for every routers ========================
+
+app.use(function(req, res, next) {
+  res.header('Access-Control-Allow-Origin', "http://localhost:3000");
+  res.header('Access-Control-Allow-Credentials', true);
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  next();
+});
+
 // Set Security HTTP headers
 app.use(
   helmet.contentSecurityPolicy({
@@ -50,7 +59,7 @@ app.use("/api", limiter);
 // Reading data from body into req.body
 app.use(
   express.json({
-    limit: "10kb",
+    limit: "1000kb",
   })
 );
 app.use(cookieParser());
@@ -79,6 +88,11 @@ app.use(
     ],
   })
 );
+
+app.use((req, res, next) => {
+  // logger.log("info", "hi");
+  next();
+});
 
 // ======================== 2) Routes ========================
 
