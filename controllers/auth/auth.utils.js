@@ -31,7 +31,6 @@ exports.createSendToken = (user, statusCode, res) => {
   // Send cookie -> server to client
   res.cookie("jwt", token, cookieOptions);
 
-  res.cookie("testCookie", "hello world", {httpOnly: true});
   // Get rid of sensitive data
   user.password = undefined;
   user.passwordChangedAt = undefined;
@@ -40,9 +39,7 @@ exports.createSendToken = (user, statusCode, res) => {
     status: "success",
     token,
     data: {
-      // user,
-      cookie: "hi",
-
+      user,
     },
   });
 };

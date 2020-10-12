@@ -22,11 +22,13 @@ router.patch(
   authController.resetPassword
 );
 
-// @private
 router.get("/birthdayData", userController.getBirthdayData);
 router.post("/signup", signUpValidation, validate, authController.signUp);
 router.post("/login", logInValidation, validate, authController.logIn);
 router.post("/googlelogin", authController.googleLogIn);
+
+// @private get s3 bucket image
+router.get('/images/:imageId', authController.protect, userController.getS3Image);
 
 // @private
 // @body: avatar, name, email, birthday
@@ -35,7 +37,9 @@ router.patch(
   authController.protect,
   userController.uploadUserAvatar,
   userController.resizeUserPhoto,
-  userController.updateMe
+  // Please use updateMe with deleteOldAvatarFromS3
+  // updateMe itself will not return any response
+  userController.updateMe,
 );
 
 // router.patch('/updateMe', upload.single('avatar'))

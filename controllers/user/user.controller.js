@@ -1,38 +1,18 @@
+const { s3 } = require("../../config/AWS");
 const User = require("../../models/user/user.model");
 const QueryStringHandler = require("../../helpers/QueryStringHandler");
 const withCatchErrAsync = require("../../utils/error/withCatchErrorAsync");
 const OperationalErr = require("../../helpers/OperationalErr");
-const { filterObj } = require("./user.utils");
-const multer = require("multer");
+const { filterObj, upload, deleteOldAvatarFromS3, uploadAvatarToS3 } = require("./user.utils");
 const sharp = require("sharp");
-const { s3 } = require("../../config/AWS");
-const multerStorage = multer.memoryStorage();
-
-const multerFilter = (req, file, callback) => {
-  if (file.mimetype.startsWith("image")) {
-    callback(null, true);
-  } else {
-    callback(
-      new OperationalErr(
-        "Not an image! Please upload only images.",
-        400,
-        "local"
-      ),
-      false
-    );
-  }
-};
-
-const upload = multer({
-  storage: multerStorage,
-  fileFilter: multerFilter,
-});
 
 exports.uploadUserAvatar = upload.single("avatar");
 
 exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
   // Multer's upload middleware puts the file into req
-  if (!req.file) return next();
+  if (!req.file) {
+    console.log("not file found")
+    return next();}
 
   const { id } = req.user;
 
@@ -52,7 +32,6 @@ exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
 // @desc    Allow admin to get all user info with queryString filtering
 // @private
 // @restrictTo only admin
-
 exports.getAllUsers = withCatchErrAsync(async (req, res, next) => {
   const queryParamFeature = new QueryStringHandler(User.find(), req.query)
     .filter()
@@ -71,6 +50,9 @@ exports.getAllUsers = withCatchErrAsync(async (req, res, next) => {
   });
 });
 
+
+// Please use updateMe with deleteOldAvatarFromS3
+// updateMe itself will not return any response
 exports.updateMe = withCatchErrAsync(async (req, res, next) => {
   // 1) Create designed error if user POST password data
   if (req.body.password || req.body.passwordConfirm) {
@@ -83,52 +65,71 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     );
   }
 
-  // @planToImplement delete the old avatar in aws before doing other things
-  // save the timestamp to be used as the identifier to locate the correct img
-  // in aws
+  // track if any errors happen in s3
+  // const s3Error = false;
 
   // Only update aws if req.file exists
   if(req.file) {
     const { filename, resizedImgBuffer } = req.file;
     const imgBuffer = resizedImgBuffer;
+
+    uploadAvatarToS3(filename, imgBuffer);
+  }
   
-    // 2) Upload to AWS S3 bucket
+  // 3) Update in database
+  // Procced only if S3 doesn't report errors
+  // if(s3Error) {
+  //   return next(new OperationalErr("AWS server error", 500, "local"));
+  // }
+  // else {
+    const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
+    if (req.file) {
+      filteredReqBody.photo = req.file.filename;
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      filteredReqBody,
+      {
+        new: true,
+        // runValidators: true,
+      }
+    );
+
+    // 3A) Delete old avatar from s3 bucket
+    deleteOldAvatarFromS3(req.user.photo);
+
+    // 3B) Send Response
+    return res.status(200).json({
+      status: "success",
+      data: {
+        user: updatedUser,
+      },
+    });
+  // }
+});
+
+exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
+    const {imageId} = req.params;
+    // Get image from AWS S3 bucket
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
-      Key: filename,
-      Body: imgBuffer,
+      Key: imageId,
     };
-  
-    return s3.upload(params, (error, data) => {
+    
+    // Get image using my aws confidentials
+    s3.getObject(params, (error, data) => {
       if (error) {
-        return next(new OperationalErr("AWS server error", 500, "local"));
+        return next(new OperationalErr("Error getting image from aws", 500, "local"))
       }
+      console.log({imageAwsRespond: data.Body})
+      return res.status(200).json({
+        status: "success",
+        data: {
+          image: data.Body,
+        }
+      })
     });
-  }
-  
-
-  // 3) Update in database
-  const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
-  if (req.file) {
-    filteredReqBody.photo = req.file.filename;
-  }
-  const updatedUser = await User.findByIdAndUpdate(
-    req.user.id,
-    filteredReqBody,
-    {
-      new: true,
-      // runValidators: true,
-    }
-  );
-  console.log("Ready to response with success status");
-  // return;
-  return res.status(200).json({
-    status: "success",
-    data: {
-      user: updatedUser,
-    },
-  });
-});
+})
 
 // @desc Allow admin to see the birthday data of the users
 // @private
