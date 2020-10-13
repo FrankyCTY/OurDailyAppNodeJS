@@ -110,6 +110,7 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
 
 exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
     const {imageId} = req.params;
+    console.log("get S3 Image", imageId);
     // Get image from AWS S3 bucket
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
@@ -117,18 +118,37 @@ exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
     };
     
     // Get image using my aws confidentials
-    s3.getObject(params, (error, data) => {
-      if (error) {
-        return next(new OperationalErr("Error getting image from aws", 500, "local"))
-      }
-      console.log({imageAwsRespond: data.Body})
-      return res.status(200).json({
-        status: "success",
-        data: {
-          image: data.Body,
+    setTimeout(() => {
+      s3.getObject(params, (error, data) => {
+        if (error) {
+          console.log(error);
+          return next(new OperationalErr("Error getting image from aws", 500, "local"))
         }
-      })
-    });
+        return res.status(200).json({
+          status: "success",
+          data: {
+            image: data.Body,
+          }
+        })
+      });
+
+    }, 2000);
+    // console.log({result});
+})
+
+exports.getAppInCart = withCatchErrAsync(async (req, res, next) => {
+  const {_id} = req.user;
+  const userDoc = await User.findById(_id).populate({path: 'applicationsInCart', select: {'name': 1, 'createdAt': 1, 'imgSrc': 1, 'price': 1, 'route': 1, 'creator': 1}});
+
+  const appInCartDocs = userDoc.applicationsInCart
+
+  return res.status(200).json({
+    status: "success",
+    result: appInCartDocs.length,
+    data: {
+      apps: appInCartDocs
+    }
+  })
 })
 
 // @desc Allow admin to see the birthday data of the users

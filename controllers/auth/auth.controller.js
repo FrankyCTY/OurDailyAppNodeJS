@@ -43,6 +43,7 @@ exports.protect = withCatchErrAsync(async (req, res, next) => {
 
   // 3) Check if user still exists @error [can check if user still active]
   const currentUser = await User.findById(decodedPayload.id);
+  console.log(decodedPayload.id)
 
   if (currentUser === null) {
     return next(
@@ -107,6 +108,19 @@ exports.signUp = withCatchErrAsync(async (req, res, next) => {
 
   return authUtils.createSendToken(newUser, 201, res);
 });
+
+exports.logOut = withCatchErrAsync(async (req, res, next) => {
+  // res.cookie('jwt', 'loggedout', {
+  //   expires: new Date(Date.now() + 10 * 1000),
+  //   httpOnly: true,
+  //   overwrite: true
+  // })
+  res.clearCookie("jwt");
+
+  return res.status(200).json({
+    status: "success"
+  })
+})
 
 exports.googleLogIn = withCatchErrAsync(async (req, res, next) => {
   const { tokenId } = req.body;

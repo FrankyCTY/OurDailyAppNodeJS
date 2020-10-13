@@ -25,6 +25,7 @@ router.patch(
 router.get("/birthdayData", userController.getBirthdayData);
 router.post("/signup", signUpValidation, validate, authController.signUp);
 router.post("/login", logInValidation, validate, authController.logIn);
+router.get("/logout", authController.logOut);
 router.post("/googlelogin", authController.googleLogIn);
 
 // @private get s3 bucket image
@@ -42,6 +43,7 @@ router.patch(
   userController.updateMe,
 );
 
-// router.patch('/updateMe', upload.single('avatar'))
+// @Private
+router.get("/getAppInCart", authController.protect, userController.getAppInCart);
 
 module.exports = router;

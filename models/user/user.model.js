@@ -13,6 +13,24 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
     },
+    ownedApplications: [
+      {          
+        type: mongoose.Schema.ObjectId,
+        ref: "Application"
+      }
+    ],
+    wishlistApplications: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Application"
+      }
+    ],
+    applicationsInCart: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Application"
+      }
+    ],
     photo: {
       type: String,
       default: "default.jpeg",

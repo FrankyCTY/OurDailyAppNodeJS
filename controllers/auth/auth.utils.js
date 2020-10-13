@@ -20,9 +20,9 @@ exports.createSendToken = (user, statusCode, res) => {
     expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRIES_IN * 24 * 60 * 60 * 1000
     ),
-    // httpOnly: true,
+    httpOnly: true,
+    overwrite: true,
     // sameSite: 'strict', // THIS is the config you are looing for.
-    // secure: true,
   };
 
   // Token will only be sent via HTTPS

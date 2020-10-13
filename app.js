@@ -7,10 +7,11 @@ const xss = require("xss-clean");
 const hpp = require("hpp");
 const cookieParser = require("cookie-parser");
 const userRouter = require("./routers/user.router");
+const applicationRouter = require("./routers/application.router");
 const globalErrorHandler = require("./controllers/globalErrController");
 const OperationalErr = require("./helpers/OperationalErr");
 const cors = require("cors");
-const { logger } = require("winston");
+// const { logger } = require("winston");
 
 const app = express();
 
@@ -49,7 +50,7 @@ if (process.env.NODE_ENV === "development") {
 
 // Limit request from same IP
 const limiter = rateLimit({
-  max: 100,
+  max: 10000,
   windowMs: 60 * 60 * 1000,
   message: "Too many requests from this IP, please try again in an hour!",
 });
@@ -98,6 +99,8 @@ app.use((req, res, next) => {
 
 // API routes
 app.use(`${process.env.URL}/users`, userRouter);
+
+app.use(`${process.env.URL}/applications`, applicationRouter);
 
 app.all("*", (req, res, next) => {
   return next(
