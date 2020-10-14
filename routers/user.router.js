@@ -45,5 +45,6 @@ router.patch(
 
 // @Private
 router.get("/getAppInCart", authController.protect, userController.getAppInCart);
+router.get("/getAppInWishlist", authController.protect, userController.getAppInWishlist);
 
 module.exports = router;

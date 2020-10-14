@@ -140,13 +140,38 @@ exports.getAppInCart = withCatchErrAsync(async (req, res, next) => {
   const {_id} = req.user;
   const userDoc = await User.findById(_id).populate({path: 'applicationsInCart', select: {'name': 1, 'createdAt': 1, 'imgSrc': 1, 'price': 1, 'route': 1, 'creator': 1}});
 
+
+  // 2) Only calculate the total price if there is app in the user's cart
+  let totalPriceInCart = 0;
+  if(userDoc.applicationsInCart.length !== 0) {
+    totalPriceInCart = userDoc.applicationsInCart.reduce((totalPrice, app) => totalPrice + app.price, 0);
+  }
+
+  console.log({totalPriceInCart})
+
   const appInCartDocs = userDoc.applicationsInCart
 
   return res.status(200).json({
     status: "success",
     result: appInCartDocs.length,
     data: {
-      apps: appInCartDocs
+      apps: appInCartDocs,
+      totalPrice: totalPriceInCart
+    }
+  })
+})
+
+exports.getAppInWishlist = withCatchErrAsync(async (req, res, next) => {
+  const {_id} = req.user;
+  const userDoc = await User.findById(_id).populate({path: 'wishlistApplications', select: {'name': 1, 'createdAt': 1, 'imgSrc': 1, 'price': 1, 'route': 1, 'creator': 1}});
+
+  const appInWishlistDocs = userDoc.wishlistApplications
+
+  return res.status(200).json({
+    status: "success",
+    result: appInWishlistDocs.length,
+    data: {
+      apps: appInWishlistDocs
     }
   })
 })

@@ -3,6 +3,7 @@ const User = require("../../models/user/user.model");
 const Application = require("../../models/application/application.model");
 const OperationalErr = require("../../helpers/OperationalErr");
 const QueryStringHandler = require("../../helpers/QueryStringHandler");
+const mongoose = require("mongoose");
 
 exports.getApplicationDetails = withCatchErrAsync(async (req, res, next) => {
     const {applicationId} = req.params;
@@ -87,6 +88,37 @@ exports.addAppToCart = withCatchErrAsync(async (req, res, next) => {
     })
 })
 
+exports.addAppToWishlist = withCatchErrAsync(async(req, res, next) => {
+    const {applicationId} = req.params;
+    const {id, wishlistApplications} = req.user;
+
+    // 1) Check if the target application exists
+    const appDoc = await Application.findById(applicationId).select({tags: 0, features: 0, videoSrc: 0, intro: 0, _v: 0});
+    // console.log(appDoc._id);
+    if(!appDoc) {
+        return next(new OperationalErr("Application does not exist.", 400, "local"));
+    }
+
+    // 2) Check if user already added this app into cart list
+    if((wishlistApplications.some(appId => appId.toString() === applicationId))) {
+        return next(new OperationalErr("Something gone wrong, please try again later", 500, "local"))
+    } else {
+        // 3) Update user with the application id adding to the cart
+        await User.findByIdAndUpdate(id, {
+            $push: {
+                wishlistApplications: applicationId
+            }
+        }, {new: true}).select("wishlistApplications");
+    }
+    
+    return res.status(200).json({
+        status: "success",
+        data: {
+            app: appDoc
+        }
+    })
+})
+
 exports.deleteFromCart = withCatchErrAsync(async (req, res, next) => {
     const {applicationId} = req.params;
     const {_id} = req.user;
@@ -102,4 +134,75 @@ exports.deleteFromCart = withCatchErrAsync(async (req, res, next) => {
         }
     }
     )
+})
+
+exports.deleteFromWishlist = withCatchErrAsync(async (req, res, next) => {
+    const {applicationId} = req.params;
+    const {_id} = req.user;
+
+    const updatedUserDoc = await User.findByIdAndUpdate(_id, {
+        $pull: {
+            wishlistApplications: applicationId
+        }
+    }, {new: true});
+
+    return res.status(200).json(
+    {        
+        status: "success",
+        result: updatedUserDoc.applicationsInCart.length,
+        data: {
+            apps: updatedUserDoc.applicationsInCart
+        }
+    }
+    )
+})
+
+exports.updateAppsInCart = withCatchErrAsync(async(req, res, next) => {
+    // Notes that apps must be an array of String (app Object id)
+    const {appIds} = req.body;
+    const {_id} = req.user;
+
+    // 1) apps must be an array
+    if(!(Array.isArray(appIds))) {
+        return next(new OperationalErr("Apps must be an array.", 400, "local"));
+    }
+
+    
+    // 2) filter the apps and only accept objectId
+    const filteredApps = appIds.filter(appId => mongoose.isValidObjectId(appId));
+    console.log({cart: filteredApps})
+
+    const updatedUserDoc = await User.findByIdAndUpdate(_id, {applicationsInCart: filteredApps}, {new: true});
+
+    return res.status(200).json({
+        status: "success",
+        result: updatedUserDoc.applicationsInCart.length,
+        data: {
+            apps: updatedUserDoc.applicationsInCart
+        }
+    })
+})
+
+exports.updateAppsInWishlist = withCatchErrAsync(async(req, res, next) => {
+    // Notes that apps must be an array of String (app Object id)
+    const {appIds} = req.body;
+    const {_id} = req.user;
+
+    // 1) apps must be an array
+    if(!(Array.isArray(appIds))) {
+        return next(new OperationalErr("Apps must be an array.", 400, "local"));
+    }
+
+    // 2) filter the apps and only accept objectId
+    const filteredApps = appIds.filter(appId => mongoose.isValidObjectId(appId));
+    console.log({wl: filteredApps})
+    const updatedUserDoc = await User.findByIdAndUpdate(_id, {wishlistApplications: filteredApps}, {new: true});
+
+    return res.status(200).json({
+        status: "success",
+        result: updatedUserDoc.wishlistApplications.length,
+        data: {
+            apps: updatedUserDoc.wishlistApplications
+        }
+    })
 })
