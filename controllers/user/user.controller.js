@@ -65,10 +65,7 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     );
   }
 
-  // track if any errors happen in s3
-  // const s3Error = false;
-
-  // Only update aws if req.file exists
+  // 2) Only update aws s3 if req.file exists
   if(req.file) {
     const { filename, resizedImgBuffer } = req.file;
     const imgBuffer = resizedImgBuffer;
@@ -76,13 +73,10 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     uploadAvatarToS3(filename, imgBuffer);
   }
   
-  // 3) Update in database
-  // Procced only if S3 doesn't report errors
-  // if(s3Error) {
-  //   return next(new OperationalErr("AWS server error", 500, "local"));
-  // }
-  // else {
-    const filteredReqBody = filterObj(req.body, ["name", "email", "birthday"]);
+    const filteredReqBody = filterObj(req.body, ["name", "email", "birthday", "imgName"]);
+    // 3) Apply if user choose one of the default avatar
+    filteredReqBody.photo = `${req.body.imgName}.jpeg`;
+    // 4) Apply if user upload his own avatar
     if (req.file) {
       filteredReqBody.photo = req.file.filename;
     }
@@ -117,22 +111,57 @@ exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
       Key: imageId,
     };
     
-    // Get image using my aws confidentials
+    let retry = false;
+    // 1) Get image using my aws confidentials
     setTimeout(() => {
       s3.getObject(params, (error, data) => {
         if (error) {
-          console.log(error);
-          return next(new OperationalErr("Error getting image from aws", 500, "local"))
-        }
-        return res.status(200).json({
-          status: "success",
-          data: {
-            image: data.Body,
+            if (error.statusCode === 404) {
+              console.log("CAUGHT NO SUCH KEY ERROR!")
+              retry = true;
+              // return next(new OperationalErr("Target image does not exist", 400, "local"));
+            }
+            if(!retry)
+            {
+              console.log(error);
+              return next(new OperationalErr("Error getting image from aws", 500, "local"));
+            }
           }
-        })
-      });
+          // return response if we got the object
+          else {
+            return res.status(200).json({
+              status: "success",
+              data: {
+                image: data.Body,
+              }
+            })
+          }
+          
+        // 2) Retry on getting default image from AWS S3 bucket
+        if(retry) {
+          const params = {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: "default.jpeg",
+          };
 
-    }, 2000);
+          s3.getObject(params, (error, data) => {
+            if (error) {
+            console.log(error);
+            return next(new OperationalErr("Error getting image from aws", 500, "local"));
+            }
+            // return response if we got the object
+            else {
+              return res.status(200).json({
+                status: "success",
+                data: {
+                  image: data.Body,
+                }
+              })
+            }
+          })
+        }
+      });
+    }, 1000);
     // console.log({result});
 })
 

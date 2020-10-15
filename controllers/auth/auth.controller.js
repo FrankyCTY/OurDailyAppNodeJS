@@ -127,8 +127,7 @@ exports.googleLogIn = withCatchErrAsync(async (req, res, next) => {
 
   const { payload } = await client.verifyIdToken({
     idToken: tokenId,
-    audience:
-      "805613129868-l5s4bkonv7tdfec7f5nqa1l6rp8rtdin.apps.googleusercontent.com",
+    audience: process.env.REACT_APP_GOOGLE_CLIENTID,
   });
 
   const { email_verified, email, name } = payload;

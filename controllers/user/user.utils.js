@@ -53,7 +53,7 @@ exports.uploadAvatarToS3 = (avatarName, imgBuffer) => {
 exports.deleteOldAvatarFromS3 = (oldAvatarName) => {
 
   // Do NOT delete the default.jpeg
-  if(oldAvatarName === "default.jpeg") return;
+  if(oldAvatarName === "default.jpeg" || oldAvatarName === "male.jpeg" || oldAvatarName === "female.jpeg") return;
 
   // Delete old avatar photo from AWS S3 bucket
   const params = {

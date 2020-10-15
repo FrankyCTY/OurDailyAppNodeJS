@@ -67,16 +67,19 @@ exports.addAppToCart = withCatchErrAsync(async (req, res, next) => {
         return next(new OperationalErr("Application does not exist.", 400, "local"));
     }
 
-    console.log(applicationsInCart);
     // 2) Check if user already added this app into cart list
     if((applicationsInCart.some(appId => appId.toString() === applicationId))) {
         return next(new OperationalErr("You have already added this into your cart.", 400, "local"))
     }
 
-    // 3) Update user with the application id adding to the cart
     await User.findByIdAndUpdate(id, {
+        // 3) Update user with the application id adding to the cart
         $push: {
             applicationsInCart: applicationId
+        },
+        // 4) Delete the app from the cart because app can only be on one side.
+        $pull: {
+            wishlistApplications: applicationId
         }
     }, {new: true}).select("applicationsInCart");
 
@@ -90,7 +93,7 @@ exports.addAppToCart = withCatchErrAsync(async (req, res, next) => {
 
 exports.addAppToWishlist = withCatchErrAsync(async(req, res, next) => {
     const {applicationId} = req.params;
-    const {id, wishlistApplications} = req.user;
+    const {_id, wishlistApplications} = req.user;
 
     // 1) Check if the target application exists
     const appDoc = await Application.findById(applicationId).select({tags: 0, features: 0, videoSrc: 0, intro: 0, _v: 0});
@@ -99,17 +102,22 @@ exports.addAppToWishlist = withCatchErrAsync(async(req, res, next) => {
         return next(new OperationalErr("Application does not exist.", 400, "local"));
     }
 
-    // 2) Check if user already added this app into cart list
+    // 2) Check if user already added this app into wishlist
     if((wishlistApplications.some(appId => appId.toString() === applicationId))) {
-        return next(new OperationalErr("Something gone wrong, please try again later", 500, "local"))
+        return next(new OperationalErr("You already have this app in the wishlist.", 400, "local"))
     } else {
-        // 3) Update user with the application id adding to the cart
-        await User.findByIdAndUpdate(id, {
+        const userDoc = await User.findByIdAndUpdate(_id, {
+            // 3) Update user with the application id adding to the cart
             $push: {
                 wishlistApplications: applicationId
+            },
+            // 4) Delete the app from the cart because app can only be on one side.
+            $pull: {
+                applicationsInCart: applicationId
             }
         }, {new: true}).select("wishlistApplications");
     }
+
     
     return res.status(200).json({
         status: "success",
