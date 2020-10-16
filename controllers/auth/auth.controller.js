@@ -1,3 +1,5 @@
+// const { s3 } = require("../../config/AWS");
+const {getFromS3} = require("../../utils/s3Utils");
 const withCatchErrAsync = require("../../utils/error/withCatchErrorAsync");
 const User = require("../../models/user/user.model");
 const authUtils = require("./auth.utils");
@@ -106,15 +108,19 @@ exports.signUp = withCatchErrAsync(async (req, res, next) => {
     birthday,
   });
 
-  return authUtils.createSendToken(newUser, 201, res);
+  // Get the default jpeg from s3 and send it back to user for react state
+  try {
+    await getFromS3("default.jpeg", 
+    (imgBuffer) => authUtils.createSendToken(newUser, 201, res, imgBuffer));
+        // Add retrieved default avatar to the newUser doc
+  } catch (error) {
+    console.log(error);
+    return next(new OperationalErr("Error getting image from aws", 500, "local"));
+  }
+      
 });
 
 exports.logOut = withCatchErrAsync(async (req, res, next) => {
-  // res.cookie('jwt', 'loggedout', {
-  //   expires: new Date(Date.now() + 10 * 1000),
-  //   httpOnly: true,
-  //   overwrite: true
-  // })
   res.clearCookie("jwt");
 
   return res.status(200).json({
@@ -130,23 +136,26 @@ exports.googleLogIn = withCatchErrAsync(async (req, res, next) => {
     audience: process.env.REACT_APP_GOOGLE_CLIENTID,
   });
 
-  const { email_verified, email, name } = payload;
-
+  const { email_verified, email, name, } = payload;
   if (email_verified) {
     const userDoc = await User.findOne({ email });
 
     if (userDoc) {
+      // set isOauthAccount to true
+      userDoc.isOauthAccount = true;
+
       authUtils.createSendToken(userDoc, 201, res);
     } else {
-      // else User email not created in database
 
-      // @error hash password
+      // else User email not created in database
       const password = email + process.env.RANDOM_HASH;
 
       const newUser = await User.create({
         name,
         email,
         password,
+        // set isOauthAccount to true
+        isOauthAccount: true
       });
 
       authUtils.createSendToken(newUser, 201, res);

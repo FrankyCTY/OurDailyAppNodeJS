@@ -1,17 +1,16 @@
-const { s3 } = require("../../config/AWS");
 const User = require("../../models/user/user.model");
-const QueryStringHandler = require("../../helpers/QueryStringHandler");
+const {getFromS3} = require("../../utils/s3Utils");
 const withCatchErrAsync = require("../../utils/error/withCatchErrorAsync");
 const OperationalErr = require("../../helpers/OperationalErr");
 const { filterObj, upload, deleteOldAvatarFromS3, uploadAvatarToS3 } = require("./user.utils");
 const sharp = require("sharp");
+const factory = require("../controllerFactory");
 
 exports.uploadUserAvatar = upload.single("avatar");
 
 exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
   // Multer's upload middleware puts the file into req
   if (!req.file) {
-    console.log("not file found")
     return next();}
 
   const { id } = req.user;
@@ -32,23 +31,7 @@ exports.resizeUserPhoto = withCatchErrAsync(async (req, res, next) => {
 // @desc    Allow admin to get all user info with queryString filtering
 // @private
 // @restrictTo only admin
-exports.getAllUsers = withCatchErrAsync(async (req, res, next) => {
-  const queryParamFeature = new QueryStringHandler(User.find(), req.query)
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate();
-
-  const docs = await queryParamFeature.query;
-
-  return res.status(200).json({
-    status: "success",
-    results: docs.length,
-    data: {
-      data: docs,
-    },
-  });
-});
+exports.getAllUsers = factory.getAll(User);
 
 
 // Please use updateMe with deleteOldAvatarFromS3
@@ -68,7 +51,7 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
   // 2) Only update aws s3 if req.file exists
   if(req.file) {
     const { filename, resizedImgBuffer } = req.file;
-    const imgBuffer = resizedImgBuffer;
+  const imgBuffer = resizedImgBuffer;
 
     uploadAvatarToS3(filename, imgBuffer);
   }
@@ -105,64 +88,44 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
 exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
     const {imageId} = req.params;
     console.log("get S3 Image", imageId);
-    // Get image from AWS S3 bucket
-    const params = {
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: imageId,
-    };
     
     let retry = false;
     // 1) Get image using my aws confidentials
-    setTimeout(() => {
-      s3.getObject(params, (error, data) => {
-        if (error) {
-            if (error.statusCode === 404) {
-              console.log("CAUGHT NO SUCH KEY ERROR!")
-              retry = true;
-              // return next(new OperationalErr("Target image does not exist", 400, "local"));
-            }
-            if(!retry)
-            {
-              console.log(error);
-              return next(new OperationalErr("Error getting image from aws", 500, "local"));
-            }
-          }
-          // return response if we got the object
-          else {
-            return res.status(200).json({
-              status: "success",
-              data: {
-                image: data.Body,
-              }
-            })
-          }
-          
-        // 2) Retry on getting default image from AWS S3 bucket
-        if(retry) {
-          const params = {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: "default.jpeg",
-          };
-
-          s3.getObject(params, (error, data) => {
-            if (error) {
-            console.log(error);
-            return next(new OperationalErr("Error getting image from aws", 500, "local"));
-            }
-            // return response if we got the object
-            else {
-              return res.status(200).json({
-                status: "success",
-                data: {
-                  image: data.Body,
-                }
-              })
-            }
-          })
+    try {
+      await getFromS3(imageId, (imgBuffer) => res.status(200).json({
+        status: "success",
+        data: {
+          image: imgBuffer,
         }
-      });
-    }, 1000);
-    // console.log({result});
+      }));
+      
+    } catch (error) {
+      // 2a) If error is "can't find the avatar with that Key provided"
+      // then we want to retry later
+      if (error.statusCode === 404) {
+        console.log("CAUGHT NO SUCH KEY ERROR!")
+        retry = true;
+      }
+      // 2b) If error is other error, then we throw error respond
+      if(!retry)
+      {
+        console.log(error);
+        return next(new OperationalErr("Error getting image from aws", 500, "local"));
+      } else {
+        // 3) if can't find the specific avatar, then we retry with the default jpeg
+        try {        
+          return getFromS3("default.jpeg", (imgBuffer) => res.status(200).json({
+            status: "success",
+            data: {
+              image: imgBuffer,
+            }
+          }), next);
+        } catch (error) {
+          console.log(error);
+          return next(new OperationalErr("Error getting image from aws", 500, "local"));
+        }
+      }
+    }
 })
 
 exports.getAppInCart = withCatchErrAsync(async (req, res, next) => {

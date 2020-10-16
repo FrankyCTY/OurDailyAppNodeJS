@@ -69,6 +69,10 @@ const userSchema = new mongoose.Schema(
       default: true,
       select: false,
     },
+    isOauthAccount: {
+      type: Boolean,
+      default: false,
+    }
   },
   {
     toJSON: {
