@@ -112,7 +112,6 @@ exports.signUp = withCatchErrAsync(async (req, res, next) => {
   try {
     await getFromS3("default.jpeg", 
     (imgBuffer) => authUtils.createSendToken(newUser, 201, res, imgBuffer));
-        // Add retrieved default avatar to the newUser doc
   } catch (error) {
     console.log(error);
     return next(new OperationalErr("Error getting image from aws", 500, "local"));

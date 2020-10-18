@@ -34,7 +34,7 @@ exports.upload = multer({
   fileFilter: multerFilter,
 });
 
-exports.uploadAvatarToS3 = (avatarName, imgBuffer) => {
+exports.uploadAvatarToS3 = async (avatarName, imgBuffer) => {
   // 2) Upload to AWS S3 bucket
   const params = {
     Bucket: process.env.AWS_BUCKET_NAME,
@@ -42,12 +42,7 @@ exports.uploadAvatarToS3 = (avatarName, imgBuffer) => {
     Body: imgBuffer,
   };
   
-  s3.upload(params, (error, data) => {
-    if (error) {
-      // s3Error = true;
-      // req.s3Error = true;
-    }
-  });
+  await s3.upload(params).promise();
 }
 
 exports.deleteOldAvatarFromS3 = (oldAvatarName) => {

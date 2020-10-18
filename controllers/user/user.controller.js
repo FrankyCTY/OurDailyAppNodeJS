@@ -51,9 +51,9 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
   // 2) Only update aws s3 if req.file exists
   if(req.file) {
     const { filename, resizedImgBuffer } = req.file;
-  const imgBuffer = resizedImgBuffer;
+    const imgBuffer = resizedImgBuffer;
 
-    uploadAvatarToS3(filename, imgBuffer);
+    await uploadAvatarToS3(filename, imgBuffer);
   }
   
     const filteredReqBody = filterObj(req.body, ["name", "email", "birthday", "imgName"]);
@@ -92,12 +92,12 @@ exports.getS3Image = withCatchErrAsync(async (req, res, next) => {
     let retry = false;
     // 1) Get image using my aws confidentials
     try {
-      await getFromS3(imageId, (imgBuffer) => res.status(200).json({
-        status: "success",
-        data: {
-          image: imgBuffer,
-        }
-      }));
+        await getFromS3(imageId, (imgBuffer) => res.status(200).json({
+          status: "success",
+          data: {
+            image: imgBuffer,
+          }
+        }));
       
     } catch (error) {
       // 2a) If error is "can't find the avatar with that Key provided"
