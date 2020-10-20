@@ -56,12 +56,19 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     await uploadAvatarToS3(filename, imgBuffer);
   }
   
-    const filteredReqBody = filterObj(req.body, ["name", "email", "birthday", "imgName"]);
+    const filteredReqBody = filterObj(req.body, ["name", "email", "birthday", "bio", "personalWebsite", "gender", "imgName"]);
     // 3) Apply if user choose one of the default avatar
-    filteredReqBody.photo = `${req.body.imgName}.jpeg`;
+
+    let isUpdateAvatar = false;
+    if(req.body.imgName)
+    {
+      filteredReqBody.photo = `${req.body.imgName}.jpeg`;
+      isUpdateAvatar = true;
+    }
     // 4) Apply if user upload his own avatar
     if (req.file) {
       filteredReqBody.photo = req.file.filename;
+      isUpdateAvatar = true;
     }
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
@@ -73,7 +80,9 @@ exports.updateMe = withCatchErrAsync(async (req, res, next) => {
     );
 
     // 3A) Delete old avatar from s3 bucket
-    deleteOldAvatarFromS3(req.user.photo);
+    if(isUpdateAvatar) {
+      deleteOldAvatarFromS3(req.user.photo);
+    }
 
     // 3B) Send Response
     return res.status(200).json({

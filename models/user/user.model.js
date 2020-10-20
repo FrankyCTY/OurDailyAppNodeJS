@@ -51,6 +51,14 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
     },
+    bio: {
+      type: String,
+      default: "",
+    },
+    personalWebsite: {
+      type: String,
+      default: "",
+    },
     birthday: {
       type: Date,
     },
